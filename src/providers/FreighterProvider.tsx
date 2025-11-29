@@ -86,7 +86,7 @@ export function FreighterProvider({ children }: { children: React.ReactNode }) {
       const connectionResult = await checkIsConnected();
       
       if (connectionResult.error) {
-        setError(connectionResult.error.message || "Freighter bağlantısı kontrol edilemedi");
+        setError(connectionResult.error.message || "Failed to check Freighter connection");
         setConnected(false);
         setPublicKey(null);
         setNetworkState(null);
@@ -99,27 +99,27 @@ export function FreighterProvider({ children }: { children: React.ReactNode }) {
       setConnected(isConn);
       
       if (isConn) {
-        // Public key al
+        // Get public key
         const addressResult = await getAddress();
         if (addressResult.error) {
-          setError(addressResult.error.message || "Public key alınamadı");
+          setError(addressResult.error.message || "Failed to get public key");
         } else {
           setPublicKey(addressResult.address);
         }
 
-        // Network bilgisi al
+        // Get network information
         const networkResult = await getNetwork();
         if (networkResult.error) {
-          setError(networkResult.error.message || "Network bilgisi alınamadı");
+          setError(networkResult.error.message || "Failed to get network information");
         } else {
           setNetworkState(networkResult.network);
           setNetworkPassphrase(networkResult.networkPassphrase);
         }
 
-        // Network detayları al
+        // Get network details
         const detailsResult = await getNetworkDetails();
         if (detailsResult.error) {
-          // Detaylar opsiyonel, hata olsa bile devam et
+          // Details are optional, continue even if there's an error
         } else {
           setNetworkDetailsState(detailsResult);
         }
@@ -131,7 +131,7 @@ export function FreighterProvider({ children }: { children: React.ReactNode }) {
       }
       setError(null);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Freighter bağlantısı kontrol edilemedi";
+      const errorMessage = err instanceof Error ? err.message : "Failed to check Freighter connection";
       setError(errorMessage);
       setConnected(false);
       setPublicKey(null);
@@ -169,18 +169,94 @@ export function FreighterProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     
     try {
-      manuallyDisconnectedRef.current = false;
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem(STORAGE_KEY);
+      // Check if Freighter extension is installed
+      if (typeof window === 'undefined') {
+        throw new Error("Browser environment not found");
       }
 
-      await requestAccess();
+      manuallyDisconnectedRef.current = false;
+      localStorage.removeItem(STORAGE_KEY);
+
+      try {
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => {
+            reject(new Error("Connection timeout. Freighter wallet may not be installed."));
+          }, 5000);
+        });
+
+        const accessResult = await Promise.race([
+          requestAccess(),
+          timeoutPromise
+        ]) as Awaited<ReturnType<typeof requestAccess>> | { error: { message: string; name: string } };
+        
+        if (accessResult && typeof accessResult === 'object' && 'error' in accessResult && accessResult.error) {
+          const errorMsg = accessResult.error.message || accessResult.error.name;
+          
+          if (
+            errorMsg?.toLowerCase().includes('not found') ||
+            errorMsg?.toLowerCase().includes('not installed') ||
+            errorMsg?.toLowerCase().includes('extension') ||
+            errorMsg?.toLowerCase().includes('freighter') ||
+            errorMsg?.toLowerCase().includes('wallet')
+          ) {
+            const walletNotFoundError = "Freighter wallet not found. Please install the Freighter extension.";
+            setError(walletNotFoundError);
+            setIsLoading(false);
+            throw new Error(walletNotFoundError);
+          }
+          
+          const errorMessage = errorMsg || "Failed to connect to Freighter";
+          setError(errorMessage);
+          setIsLoading(false);
+          throw new Error(errorMessage);
+        }
+      } catch (accessError) {
+        const errorMsg = accessError instanceof Error ? accessError.message : String(accessError);
+        
+        if (
+          errorMsg.toLowerCase().includes('not found') ||
+          errorMsg.toLowerCase().includes('not installed') ||
+          errorMsg.toLowerCase().includes('extension') ||
+          errorMsg.toLowerCase().includes('freighter') ||
+          errorMsg.toLowerCase().includes('wallet') ||
+          errorMsg.toLowerCase().includes('unavailable') ||
+          errorMsg.toLowerCase().includes('timeout')
+        ) {
+          const walletNotFoundError = "Freighter wallet not found. Please install the Freighter extension.";
+          setError(walletNotFoundError);
+          setIsLoading(false);
+          throw new Error(walletNotFoundError);
+        }
+        
+        setIsLoading(false);
+        throw accessError;
+      }
       
       await checkConnection();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Freighter'a bağlanılamadı";
+      let errorMessage: string;
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        
+        if (
+          errorMessage.toLowerCase().includes('not found') ||
+          errorMessage.toLowerCase().includes('not installed') ||
+          errorMessage.toLowerCase().includes('extension') ||
+          errorMessage.toLowerCase().includes('freighter') ||
+          errorMessage.toLowerCase().includes('wallet') ||
+          errorMessage.toLowerCase().includes('unavailable') ||
+          errorMessage.toLowerCase().includes('timeout')
+        ) {
+          errorMessage = "Freighter wallet not found. Please install the Freighter extension.";
+        }
+      } else {
+        errorMessage = "Freighter wallet not found. Please install the Freighter extension.";
+      }
+      
       setError(errorMessage);
-      throw err;
+      setIsLoading(false);
+      throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -203,7 +279,7 @@ export function FreighterProvider({ children }: { children: React.ReactNode }) {
       setNetworkPassphrase(null);
       setNetworkDetailsState(null);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Bağlantı kesilemedi";
+      const errorMessage = err instanceof Error ? err.message : "Failed to disconnect";
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -217,13 +293,13 @@ export function FreighterProvider({ children }: { children: React.ReactNode }) {
     try {
       const result = await signTransaction(xdr, opts);
       if (result.error) {
-        const errorMessage = result.error.message || "İşlem imzalanamadı";
+        const errorMessage = result.error.message || "Failed to sign transaction";
         setError(errorMessage);
         throw new Error(errorMessage);
       }
       return { signedTxXdr: result.signedTxXdr, signerAddress: result.signerAddress };
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "İşlem imzalanamadı";
+      const errorMessage = err instanceof Error ? err.message : "Failed to sign transaction";
       setError(errorMessage);
       throw err;
     }
@@ -236,13 +312,13 @@ export function FreighterProvider({ children }: { children: React.ReactNode }) {
     try {
       const result = await signAuthEntry(entryXdr, opts);
       if (result.error) {
-        const errorMessage = result.error.message || "Auth entry imzalanamadı";
+        const errorMessage = result.error.message || "Failed to sign auth entry";
         setError(errorMessage);
         throw new Error(errorMessage);
       }
       return { signedAuthEntry: result.signedAuthEntry, signerAddress: result.signerAddress };
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Auth entry imzalanamadı";
+      const errorMessage = err instanceof Error ? err.message : "Failed to sign auth entry";
       setError(errorMessage);
       throw err;
     }
@@ -252,7 +328,7 @@ export function FreighterProvider({ children }: { children: React.ReactNode }) {
     try {
       const result = await getNetwork();
       if (result.error) {
-        const errorMessage = result.error.message || "Ağ bilgisi alınamadı";
+        const errorMessage = result.error.message || "Failed to get network information";
         setError(errorMessage);
         throw new Error(errorMessage);
       }
@@ -260,7 +336,7 @@ export function FreighterProvider({ children }: { children: React.ReactNode }) {
       setNetworkPassphrase(result.networkPassphrase);
       return { network: result.network, networkPassphrase: result.networkPassphrase };
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Ağ bilgisi alınamadı";
+      const errorMessage = err instanceof Error ? err.message : "Failed to get network information";
       setError(errorMessage);
       throw err;
     }
@@ -270,14 +346,14 @@ export function FreighterProvider({ children }: { children: React.ReactNode }) {
     try {
       const result = await getNetworkDetails();
       if (result.error) {
-        const errorMessage = result.error.message || "Ağ detayları alınamadı";
+        const errorMessage = result.error.message || "Failed to get network details";
         setError(errorMessage);
         throw new Error(errorMessage);
       }
       setNetworkDetailsState(result);
       return result;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Ağ detayları alınamadı";
+      const errorMessage = err instanceof Error ? err.message : "Failed to get network details";
       setError(errorMessage);
       throw err;
     }

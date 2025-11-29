@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Figtree, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { FreighterProvider } from "@/providers/FreighterProvider";
+import { Toaster } from "@/components/ui/sonner";
 
 const figtree = Figtree({
   subsets: ["latin"],
@@ -28,6 +29,7 @@ export default function RootLayout({
         <FreighterProvider>
           {children}
         </FreighterProvider>
+        <Toaster />
       </body>
     </html>
   );

@@ -2,6 +2,8 @@
 
 import { useFreighter } from "@/providers/FreighterProvider";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 export function FreighterConnect() {
   const {
@@ -14,38 +16,39 @@ export function FreighterConnect() {
     error,
   } = useFreighter();
 
+  useEffect(() => {
+    if (error) {
+      toast.error(error, {
+        duration: 5000,
+      });
+    }
+  }, [error]);
+
   const handleConnect = async () => {
     try {
       await connect();
+      toast.success("Successfully connected to Freighter");
     } catch (err) {
-      console.error("Bağlantı hatası:", err);
+      console.error("Connection error:", err);
+      // Error is already set in the provider and will be shown via toast
     }
   };
 
   const handleDisconnect = async () => {
     try {
       await disconnect();
+      toast.success("Disconnected from Freighter");
     } catch (err) {
-      console.error("Bağlantı kesme hatası:", err);
+      console.error("Disconnect error:", err);
+      // Error is already set in the provider and will be shown via toast
     }
   };
 
   if (isLoading) {
     return (
       <Button disabled>
-        Yükleniyor...
+        Loading...
       </Button>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-2">
-        <Button onClick={handleConnect} variant="destructive">
-          Tekrar Bağlan
-        </Button>
-        <p className="text-sm text-red-500">{error}</p>
-      </div>
     );
   }
 
