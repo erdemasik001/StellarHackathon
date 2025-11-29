@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Figtree, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { FreighterProvider } from "@/providers/FreighterProvider";
 
 const figtree = Figtree({
   subsets: ["latin"],
@@ -24,7 +25,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={"dark"}>
       <body className={`${figtree.variable} ${geistMono.variable} antialiased`}>
-        {children}
+        <FreighterProvider>
+          {children}
+        </FreighterProvider>
       </body>
     </html>
   );

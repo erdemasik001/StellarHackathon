@@ -3,6 +3,31 @@
 import { Button } from "./ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import { useFreighter } from "@/providers/FreighterProvider";
+import { FreighterConnect } from "./FreighterConnect";
+
+function WalletDisplay() {
+  const { isConnected, publicKey } = useFreighter();
+
+  if (isConnected && publicKey) {
+    return (
+      <div className="border corner-accents px-3 py-2 rounded hover:bg-muted/30 transition-colors cursor-pointer">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+          <span className="text-xs font-medium font-mono">
+            {publicKey.slice(0, 6)}...{publicKey.slice(-4)}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="hidden md:block">
+      <FreighterConnect />
+    </div>
+  );
+}
 
 export default function Header() {
   const currentDate = new Date().toLocaleDateString("en-US", {
@@ -73,12 +98,7 @@ export default function Header() {
                 Create Event
               </Button>
             </Link>
-            <div className="border corner-accents px-3 py-2 rounded hover:bg-muted/30 transition-colors cursor-pointer">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-accent animate-pulse"></div>
-                <span className="text-xs font-medium">0x742d...3f8a</span>
-              </div>
-            </div>
+            <WalletDisplay />
           </div>
         </div>
       </div>

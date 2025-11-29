@@ -4,8 +4,12 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { ArrowUpRight, Send, Download, QrCode } from "lucide-react";
 import Link from "next/link";
+import { useFreighter } from "@/providers/FreighterProvider";
+import { FreighterConnect } from "@/components/FreighterConnect";
 
 export default function MyTicketsPage() {
+  const { isConnected, publicKey, network, networkPassphrase } = useFreighter();
+  
   const tickets = [
     {
       id: "1",
@@ -91,13 +95,28 @@ export default function MyTicketsPage() {
                 <div className="text-xs text-muted-foreground mb-1">
                   WALLET_ADDRESS
                 </div>
-                <div className="text-sm font-bold font-mono">0x8c4d...1a3f</div>
+                {isConnected && publicKey ? (
+                  <div className="text-sm font-bold font-mono text-green-500">
+                    {publicKey.slice(0, 8)}...{publicKey.slice(-8)}
+                  </div>
+                ) : (
+                  <div className="text-sm font-bold font-mono text-muted-foreground">
+                    Not Connected
+                  </div>
+                )}
               </div>
               <div className="p-6 flex-1 flex flex-col justify-center hover:bg-muted/30 transition-colors">
                 <div className="text-xs text-muted-foreground mb-1">
                   CHAIN_NETWORK
                 </div>
-                <div className="text-sm font-bold">ETH_MAINNET</div>
+                {network ? (
+                  <div className="text-sm font-bold text-green-500">{network}</div>
+                ) : (
+                  <div className="text-sm font-bold text-muted-foreground">Not Connected</div>
+                )}
+              </div>
+              <div className="p-6 flex-1 flex flex-col justify-center">
+                <FreighterConnect />
               </div>
             </div>
           </div>

@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import { FreighterConnect } from "@/components/FreighterConnect";
 export default function Home() {
   const features = [
     {
@@ -153,9 +154,7 @@ export default function Home() {
               </div>
               Sticket
             </Link>
-            <Link href="/tickets">
-              <Button className="font-mono">Connect</Button>
-            </Link>
+            <FreighterConnect />
           </div>
           <div className="p-8 md:p-20  flex flex-col items-center justify-center gap-4 py-40 lg:p-40">
             <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-center tracking-tighter">
